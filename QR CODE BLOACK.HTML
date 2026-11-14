@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Studio Self-Service Print — Jamshedpur</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Google Font Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- PDF.js for Page Preview Thumbnails -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- Razorpay Checkout Script -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        darkbg: '#0a0a0a',
+                        cardbg: '#141414',
+                        bordergray: '#262626',
+                        mutedgray: '#888888',
+                    }
+                }
+            }
+        };
+        if (window.pdfjsLib) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+    </script>
+    <style>
+        * { box-sizing: border-box; }
+        body { background-color: #0a0a0a; color: #f5f5f5; font-family: 'Inter', sans-serif; overflow-x: hidden; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #262626; border-radius: 6px; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-neutral-800 selection:text-white relative">
+
+    <!-- TOP HEADER WITH SHOP LOGO -->
+    <header class="bg-cardbg border-b border-bordergray px-6 py-4 flex items-center justify-between shadow-lg sticky top-0 z-20">
+        <div class="flex items-center space-x-3">
+            <div class="bg-white p-2 rounded-xl shadow-md flex items-center justify-center text-black">
+                <i class="ph-bold ph-storefront text-lg"></i>
+            </div>
+            <div>
+                <h1 class="text-xs md:text-sm font-bold tracking-[0.2em] text-white uppercase">Silver Halide Works</h1>
+                <p class="text-[10px] text-neutral-400 font-light tracking-wider uppercase">● Document Kiosk • Jamshedpur</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <button onclick="resetCartSession()" class="px-3 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-neutral-300 font-medium text-xs flex items-center gap-1.5 border border-bordergray transition-all cursor-pointer">
+                <i class="ph-bold ph-arrows-counter-clockwise"></i> Reset
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN WORKSPACE -->
+    <main class="flex-1 max-w-xl w-full mx-auto p-4 md:p-6 space-y-5 pb-24">
+
+        <!-- STEP 1: UPLOAD & QUEUE -->
+        <div class="bg-cardbg border border-bordergray rounded-2xl p-4 md:p-6 shadow-lg space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 class="text-xs uppercase tracking-widest text-neutral-300 font-medium flex items-center gap-2">
+                    <i class="ph-fill ph-files text-neutral-400 text-base"></i> 1. Select & Preview Documents
+                </h2>
+                <label class="px-4 py-2.5 rounded-xl bg-white hover:bg-neutral-200 active:bg-neutral-300 text-black font-medium text-xs flex items-center gap-1.5 shadow-md cursor-pointer transition-all">
+                    <i class="ph-bold ph-plus-circle text-base"></i> Add PDF
+                    <input type="file" id="pdf-file-input" accept="application/pdf" multiple class="hidden" onchange="handleFilesAdded(event)">
+                </label>
+            </div>
+
+            <!-- Empty State -->
+            <div id="cart-empty" class="py-10 border-2 border-dashed border-bordergray rounded-xl flex flex-col items-center justify-center text-neutral-500 gap-2 text-center">
+                <i class="ph-duotone ph-file-pdf text-4xl text-neutral-600"></i>
+                <p class="text-xs font-light">No PDF documents added yet. Tap "Add PDF" to upload files from your device.</p>
+            </div>
+
+            <!-- Cart Items List Container -->
+            <div id="cart-list" class="space-y-4 hidden"></div>
+        </div>
+
+        <!-- STEP 2: CHECKOUT SUMMARY -->
+        <div id="checkout-card" class="bg-cardbg border border-bordergray rounded-2xl p-5 md:p-6 shadow-lg space-y-4 hidden">
+            <h2 class="text-xs uppercase tracking-widest text-neutral-300 font-medium flex items-center gap-2">
+                <i class="ph-fill ph-receipt text-neutral-400 text-base"></i> 2. Order Checkout
+            </h2>
+
+            <div class="bg-neutral-900 rounded-xl p-4 border border-bordergray space-y-2.5 text-xs">
+                <div class="flex justify-between text-neutral-400 font-light">
+                    <span>Total Documents:</span>
+                    <span id="summary-doc-count" class="font-medium text-white">0</span>
+                </div>
+                <div class="flex justify-between text-neutral-400 font-light">
+                    <span>Total Billable Pages:</span>
+                    <span id="summary-page-count" class="font-medium text-white">0 Pages</span>
+                </div>
+                <div class="flex justify-between text-neutral-400 font-light">
+                    <span>Subtotal Amount:</span>
+                    <span id="summary-subtotal-price" class="font-medium text-white">₹0</span>
+                </div>
+                <div id="discount-row" class="flex justify-between text-emerald-400 font-light hidden">
+                    <span id="discount-label">Tier Discount:</span>
+                    <span id="summary-discount-amount" class="font-medium">-₹0</span>
+                </div>
+                <hr class="border-bordergray">
+                <div class="flex justify-between items-center text-sm">
+                    <span class="font-medium text-neutral-200">Total Payable Amount:</span>
+                    <span id="summary-total-price" class="text-xl font-medium text-white">₹0</span>
+                </div>
+            </div>
+
+            <button onclick="initiateRazorpayPayment()" class="w-full py-3.5 rounded-xl bg-white hover:bg-neutral-200 active:bg-neutral-300 text-black font-medium text-sm flex items-center justify-center gap-2.5 shadow-xl transition-all cursor-pointer">
+                <i class="ph-bold ph-shield-check text-lg"></i> PAY & PRINT NOW
+            </button>
+            <p class="text-[10px] text-center text-neutral-500">Secured by Razorpay • Instant Auto-Release to Printer</p>
+        </div>
+
+    </main>
+
+    <!-- INTERACTIVE PAGE VIEWER MODAL -->
+    <div id="page-modal" class="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex flex-col hidden overflow-y-auto">
+        <div class="bg-cardbg border-b border-bordergray px-6 py-4 flex items-center justify-between shrink-0 shadow-lg sticky top-0 z-10">
+            <div>
+                <h3 id="modal-doc-title" class="text-xs uppercase tracking-wider font-medium text-white truncate max-w-xs">Select Pages to Print</h3>
+                <p class="text-[10px] text-neutral-400">Tap pages to include/exclude, or use quick select options below.</p>
+            </div>
+            <button onclick="closePageModal()" class="p-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-white cursor-pointer border border-bordergray">
+                <i class="ph-bold ph-x text-base"></i>
+            </button>
+        </div>
+
+        <div class="bg-neutral-900 border-b border-bordergray px-6 py-3 flex items-center justify-between shrink-0 text-xs sticky top-[73px] z-10">
+            <div class="flex gap-2">
+                <button onclick="modalSelectAll(true)" class="px-3 py-1.5 rounded-lg bg-cardbg hover:bg-neutral-800 text-white font-medium border border-bordergray">Select All</button>
+                <button onclick="modalSelectAll(false)" class="px-3 py-1.5 rounded-lg bg-cardbg hover:bg-neutral-800 text-neutral-400 font-medium border border-bordergray">Deselect All</button>
+            </div>
+            <span id="modal-selected-count" class="font-medium text-neutral-300">0 Pages Selected</span>
+        </div>
+
+        <div id="modal-thumbnail-grid" class="flex-1 p-4 md:p-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 max-w-4xl mx-auto w-full"></div>
+
+        <div class="bg-cardbg border-t border-bordergray p-4 shrink-0 flex justify-end sticky bottom-0 z-10">
+            <button onclick="saveModalSelection()" class="px-6 py-3 rounded-xl bg-white hover:bg-neutral-200 text-black font-medium text-xs uppercase tracking-wider cursor-pointer">
+                Apply Page Selection
+            </button>
+        </div>
+    </div>
+
+    <!-- FOOTER WITH NAVIGATION LINKS -->
+    <footer class="bg-cardbg border-t border-bordergray px-6 py-6 text-center text-xs text-neutral-400 shrink-0 space-y-3">
+        <div class="flex flex-wrap justify-center items-center gap-4 text-xs font-medium tracking-wider uppercase">
+            <a href="https://www.silverhalideworks.in/home" class="hover:text-white transition-colors">Home</a>
+            <span class="text-neutral-700">&bull;</span>
+            <a href="https://www.silverhalideworks.in/services/" class="hover:text-white transition-colors">Services</a>
+            <span class="text-neutral-700">&bull;</span>
+            <a href="https://www.silverhalideworks.in/contact-us" class="hover:text-white transition-colors">Contact Us</a>
+            <span class="text-neutral-700">&bull;</span>
+            <a href="https://www.silverhalideworks.in/privacy-policy/" class="hover:text-white transition-colors">Privacy Policy</a>
+            <span class="text-neutral-700">&bull;</span>
+            <a href="https://www.silverhalideworks.in/terms-of-service" class="hover:text-white transition-colors">Terms of Service</a>
+        </div>
+        <div class="text-[11px] text-neutral-500 font-light">
+            &copy; 2026 Silver Halide Works. All rights reserved. Jamshedpur, IN.
+        </div>
+    </footer>
+
+    <!-- LOGIC SCRIPT -->
+    <script>
+        const RATES = {
+            'bw-single': 2,
+            'color-single': 10,
+            'bw-double': 3,
+            'color-double': 18
+        };
+
+        let cartItems = []; 
+        let activeModalItemIndex = null;
+        let activeModalSelectedPages = []; 
+        let activeModalPdfDoc = null;
+        let currentThumbListCache = [];
+
+        function formatBytes(bytes) {
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+
+        async function handleFilesAdded(event) {
+            const files = Array.from(event.target.files);
+            if (!files.length) return;
+
+            for (const file of files) {
+                const item = {
+                    id: Math.random().toString(36).substring(2, 9),
+                    file: file,
+                    name: file.name,
+                    sizeBytes: file.size,
+                    pdfDoc: null,
+                    pageCount: 1,
+                    selectedPages: [],
+                    thumbUrl: '',
+                    printMode: 'bw-single',
+                    copies: 1
+                };
+
+                try {
+                    const buf = await file.arrayBuffer();
+                    const loadingTask = pdfjsLib.getDocument({ data: buf });
+                    const pdfDoc = await loadingTask.promise;
+                    item.pdfDoc = pdfDoc;
+                    item.pageCount = pdfDoc.numPages;
+                    item.selectedPages = Array.from({ length: pdfDoc.numPages }, (_, i) => i + 1);
+
+                    const page = await pdfDoc.getPage(1);
+                    const viewport = page.getViewport({ scale: 0.4 });
+                    const canvas = document.createElement('canvas');
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    await page.render({ canvasContext: ctx, viewport }).promise;
+                    item.thumbUrl = canvas.toDataURL('image/jpeg', 0.85);
+                } catch (e) {
+                    console.warn('Could not read PDF', e);
+                }
+
+                cartItems.push(item);
+            }
+
+            document.getElementById('pdf-file-input').value = '';
+            renderCart();
+        }
+
+        function parsePageRangeInput(inputStr, maxPages) {
+            const set = new Set();
+            if (!inputStr || !inputStr.trim()) return set;
+            const parts = inputStr.split(',');
+            parts.forEach(part => {
+                part = part.trim();
+                if (part.includes('-')) {
+                    const [start, end] = part.split('-').map(n => parseInt(n.trim(), 10));
+                    if (!isNaN(start) && !isNaN(end)) {
+                        for (let i = Math.min(start, end); i <= Math.max(start, end); i++) {
+                            if (i >= 1 && i <= maxPages) set.add(i);
+                        }
+                    }
+                } else {
+                    const p = parseInt(part, 10);
+                    if (!isNaN(p) && p >= 1 && p <= maxPages) set.add(p);
+                }
+            });
+            return Array.from(set).sort((a, b) => a - b);
+        }
+
+        function formatPageRangeOutput(pages, maxPages) {
+            if (!pages.length) return 'None (0 Pages)';
+            if (pages.length === maxPages) return `All (${maxPages} Pages)`;
+            return pages.join(', ');
+        }
+
+        function updateItemOption(id, field, value) {
+            const item = cartItems.find(i => i.id === id);
+            if (!item) return;
+            if (field === 'printMode') item.printMode = value;
+            if (field === 'copies') item.copies = Math.max(1, parseInt(value) || 1);
+            if (field === 'rangeInput') {
+                item.selectedPages = parsePageRangeInput(value, item.pageCount);
+            }
+            renderCart();
+        }
+
+        function removeItem(id) {
+            cartItems = cartItems.filter(i => i.id !== id);
+            renderCart();
+        }
+
+        async function openPageModal(index) {
+            const item = cartItems[index];
+            if (!item || !item.pdfDoc) return;
+            activeModalItemIndex = index;
+            activeModalPdfDoc = item.pdfDoc;
+            activeModalSelectedPages = [...item.selectedPages];
+
+            document.getElementById('modal-doc-title').innerText = `Select Pages: ${item.name}`;
+            document.getElementById('page-modal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+
+            const grid = document.getElementById('modal-thumbnail-grid');
+            grid.innerHTML = '<div class="col-span-full text-center text-neutral-500 py-10">Loading page thumbnails...</div>';
+
+            currentThumbListCache = [];
+            for (let i = 1; i <= item.pageCount; i++) {
+                const page = await item.pdfDoc.getPage(i);
+                const viewport = page.getViewport({ scale: 0.35 });
+                const canvas = document.createElement('canvas');
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                await page.render({ canvasContext: ctx, viewport }).promise;
+                currentThumbListCache.push({ pageNum: i, dataUrl: canvas.toDataURL('image/jpeg', 0.8) });
+            }
+
+            renderModalThumbnails(currentThumbListCache);
+        }
+
+        function renderModalThumbnails(thumbList) {
+            const grid = document.getElementById('modal-thumbnail-grid');
+            grid.innerHTML = '';
+
+            thumbList.forEach(t => {
+                const isSelected = activeModalSelectedPages.includes(t.pageNum);
+                const card = document.createElement('div');
+                card.className = `bg-neutral-900 border rounded-xl p-2.5 flex flex-col items-center gap-2 cursor-pointer transition-all ${isSelected ? 'border-white bg-white/5 shadow-lg' : 'border-bordergray opacity-40'}`;
+                card.onclick = () => {
+                    if (activeModalSelectedPages.includes(t.pageNum)) {
+                        activeModalSelectedPages = activeModalSelectedPages.filter(p => p !== t.pageNum);
+                    } else {
+                        activeModalSelectedPages.push(t.pageNum);
+                        activeModalSelectedPages.sort((a,b)=>a-b);
+                    }
+                    renderModalThumbnails(thumbList);
+                };
+
+                card.innerHTML = `
+                    <div class="aspect-[3/4] bg-white rounded-lg overflow-hidden flex items-center justify-center relative w-full">
+                        <img src="${t.dataUrl}" class="max-h-full object-contain">
+                        <div class="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${isSelected ? 'bg-white text-black' : 'bg-neutral-800 text-neutral-500'}">
+                            ${isSelected ? '✓' : ''}
+                        </div>
+                    </div>
+                    <span class="text-xs font-light text-neutral-300">Page ${t.pageNum}</span>
+                `;
+                grid.appendChild(card);
+            });
+
+            document.getElementById('modal-selected-count').innerText = `${activeModalSelectedPages.length} of ${thumbList.length} Pages Selected`;
+        }
+
+        function modalSelectAll(select) {
+            if (!activeModalPdfDoc) return;
+            const max = activeModalPdfDoc.numPages;
+            if (select) {
+                activeModalSelectedPages = Array.from({ length: max }, (_, i) => i + 1);
+            } else {
+                activeModalSelectedPages = [];
+            }
+            renderModalThumbnails(currentThumbListCache);
+        }
+
+        function closePageModal() {
+            document.getElementById('page-modal').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        function saveModalSelection() {
+            if (activeModalItemIndex !== null && cartItems[activeModalItemIndex]) {
+                cartItems[activeModalItemIndex].selectedPages = [...activeModalSelectedPages];
+                renderCart();
+            }
+            closePageModal();
+        }
+
+        function calculateCartTotal() {
+            let totalPages = 0;
+            let subtotal = 0;
+
+            cartItems.forEach(item => {
+                const rate = RATES[item.printMode] || 2;
+                const pageCount = item.selectedPages.length || 0;
+                totalPages += (pageCount * item.copies);
+                subtotal += (pageCount * item.copies * rate);
+            });
+
+            // Tiered Discount Logic
+            let discountPercent = 0;
+            if (subtotal > 1000) {
+                discountPercent = 20;
+            } else if (subtotal > 500) {
+                discountPercent = 15;
+            } else if (subtotal > 250) {
+                discountPercent = 10;
+            } else if (subtotal > 100) {
+                discountPercent = 5;
+            }
+
+            const discountAmount = Math.round((subtotal * discountPercent) / 100);
+            const totalPrice = Math.max(0, subtotal - discountAmount);
+
+            return { totalPages, subtotal, discountPercent, discountAmount, totalPrice };
+        }
+
+        function renderCart() {
+            const listEl = document.getElementById('cart-list');
+            const emptyEl = document.getElementById('cart-empty');
+            const checkoutCard = document.getElementById('checkout-card');
+
+            if (!cartItems.length) {
+                listEl.classList.add('hidden');
+                emptyEl.classList.remove('hidden');
+                checkoutCard.classList.add('hidden');
+                return;
+            }
+
+            emptyEl.classList.add('hidden');
+            listEl.classList.remove('hidden');
+            checkoutCard.classList.remove('hidden');
+            listEl.innerHTML = '';
+
+            cartItems.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.className = "bg-neutral-900 border border-bordergray rounded-xl p-4 space-y-3.5 shadow-inner";
+                
+                const options = [
+                    { id: 'bw-single', title: 'Single Side (B&W)', price: '₹2/p', icon: 'ph-file-text' },
+                    { id: 'color-single', title: 'Single Side (Color)', price: '₹10/p', icon: 'ph-palette' },
+                    { id: 'bw-double', title: 'Front & Back (B&W)', price: '₹3/p', icon: 'ph-book-open' },
+                    { id: 'color-double', title: 'Front & Back (Color)', price: '₹18/p', icon: 'ph-paint-brush' }
+                ];
+
+                let optionsHtml = '<div class="grid grid-cols-2 gap-2 pt-1">';
+                options.forEach(opt => {
+                    const isSelected = item.printMode === opt.id;
+                    const activeClass = isSelected ? 'border-white bg-neutral-800 text-white shadow' : 'border-bordergray bg-neutral-950 text-neutral-400 hover:border-neutral-700';
+                    optionsHtml += `
+                        <button type="button" onclick="updateItemOption('${item.id}', 'printMode', '${opt.id}')" class="p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${activeClass}">
+                            <div class="flex items-center justify-between w-full">
+                                <i class="ph-bold ${opt.icon} text-base ${isSelected ? 'text-white' : 'text-neutral-500'}"></i>
+                                <span class="text-[10px] font-medium px-1.5 py-0.5 rounded ${isSelected ? 'bg-white text-black' : 'bg-neutral-800 text-neutral-400'}">${opt.price}</span>
+                            </div>
+                            <span class="text-[11px] font-medium mt-2 leading-tight">${opt.title}</span>
+                        </button>
+                    `;
+                });
+                optionsHtml += '</div>';
+
+                const pageRangeStr = formatPageRangeOutput(item.selectedPages, item.pageCount);
+
+                card.innerHTML = `
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="w-16 h-20 bg-white rounded-lg overflow-hidden shrink-0 border border-bordergray flex items-center justify-center cursor-pointer" onclick="openPageModal(${index})">
+                            ${item.thumbUrl ? `<img src="${item.thumbUrl}" class="w-full h-full object-cover" alt="Preview">` : `<i class="ph-bold ph-file-pdf text-2xl text-neutral-400"></i>`}
+                        </div>
+
+                        <div class="min-w-0 flex-1">
+                            <h3 class="text-xs font-medium text-white truncate">${item.name}</h3>
+                            <p class="text-[10px] text-neutral-400 mt-0.5 font-light">${item.pageCount} Total Pages • ${formatBytes(item.sizeBytes)}</p>
+                            <button onclick="openPageModal(${index})" class="mt-2 px-3 py-1.5 rounded-lg bg-neutral-800 border border-bordergray text-neutral-300 font-medium text-[11px] flex items-center gap-1.5 cursor-pointer hover:bg-neutral-700 transition-colors">
+                                <i class="ph-bold ph-eye"></i> View & Select Pages (${item.selectedPages.length} active)
+                            </button>
+                        </div>
+
+                        <button onclick="removeItem('${item.id}')" class="text-slate-500 hover:text-red-400 p-1 cursor-pointer">
+                            <i class="ph-bold ph-trash text-base"></i>
+                        </button>
+                    </div>
+
+                    <div class="bg-cardbg p-2.5 rounded-xl border border-bordergray flex items-center justify-between gap-3 text-xs">
+                        <span class="text-neutral-300 font-light">Pages to Print:</span>
+                        <input type="text" value="${pageRangeStr}" onchange="updateItemOption('${item.id}', 'rangeInput', this.value)" placeholder="e.g. 1-3, 5, 8" class="bg-neutral-900 border border-bordergray rounded-lg px-3 py-1 text-white text-xs font-medium w-44 text-right focus:outline-none focus:border-neutral-500">
+                    </div>
+
+                    <div>
+                        <label class="text-[10px] font-light uppercase tracking-wider text-neutral-400 block mb-1.5">Select Print Mode</label>
+                        ${optionsHtml}
+                    </div>
+
+                    <div class="flex items-center justify-between pt-2 border-t border-bordergray">
+                        <span class="text-xs font-light text-neutral-300">Number of Copies:</span>
+                        <div class="flex items-center gap-2">
+                            <button onclick="updateItemOption('${item.id}', 'copies', ${item.copies - 1})" class="w-8 h-8 rounded-lg bg-cardbg hover:bg-neutral-800 text-white font-medium flex items-center justify-center cursor-pointer border border-bordergray"><i class="ph-bold ph-minus"></i></button>
+                            <span class="w-8 text-center text-xs font-medium text-white">${item.copies}</span>
+                            <button onclick="updateItemOption('${item.id}', 'copies', ${item.copies + 1})" class="w-8 h-8 rounded-lg bg-cardbg hover:bg-neutral-800 text-white font-medium flex items-center justify-center cursor-pointer border border-bordergray"><i class="ph-bold ph-plus"></i></button>
+                        </div>
+                    </div>
+                `;
+                listEl.appendChild(card);
+            });
+
+            const { totalPages, subtotal, discountPercent, discountAmount, totalPrice } = calculateCartTotal();
+            document.getElementById('summary-doc-count').innerText = cartItems.length;
+            document.getElementById('summary-page-count').innerText = totalPages + ' Pages';
+            document.getElementById('summary-subtotal-price').innerText = '₹' + subtotal;
+            
+            const discountRow = document.getElementById('discount-row');
+            if (discountPercent > 0) {
+                discountRow.classList.remove('hidden');
+                document.getElementById('discount-label').innerText = `Tier Discount (${discountPercent}% OFF):`;
+                document.getElementById('summary-discount-amount').innerText = '-₹' + discountAmount;
+            } else {
+                discountRow.classList.add('hidden');
+            }
+
+            document.getElementById('summary-total-price').innerText = '₹' + totalPrice;
+        }
+
+        function resetCartSession() {
+            cartItems = [];
+            renderCart();
+        }
+
+        function initiateRazorpayPayment() {
+            const { totalPrice } = calculateCartTotal();
+            if (totalPrice <= 0) return;
+
+            const options = {
+                "key": "rzp_live_TziVtDbK0wNThi",
+                "amount": totalPrice * 100,
+                "currency": "INR",
+                "name": "Silver Halide Works",
+                "description": "Document Print Job (Tier Discount Applied)",
+                "handler": function (response){
+                    alert("Payment Successful! Payment ID: " + response.razorpay_payment_id + "\nSending document to printer queue...");
+                    resetCartSession();
+                },
+                "prefill": {
+                    "name": "Kiosk Walk-in Customer",
+                    "contact": "9876543210"
+                },
+                "theme": { "color": "#0a0a0a" }
+            };
+            
+            const rzp = new Razorpay(options);
+            rzp.open();
+        }
+    </script>
+</body>
+</html>
