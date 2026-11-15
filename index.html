@@ -15,11 +15,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <!-- Razorpay Checkout Script -->
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-    
-    <!-- Firebase SDKs (Compat v9) -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
     <script>
         tailwind.config = {
@@ -123,10 +118,10 @@
                 </div>
             </div>
 
-            <button onclick="initiateRazorpayPayment()" class="w-full py-3.5 rounded-xl bg-white hover:bg-neutral-200 active:bg-neutral-300 text-black font-medium text-sm flex items-center justify-center gap-2.5 shadow-xl transition-all cursor-pointer">
+            <button id="pay-btn" onclick="initiateRazorpayPayment()" class="w-full py-3.5 rounded-xl bg-white hover:bg-neutral-200 active:bg-neutral-300 text-black font-medium text-sm flex items-center justify-center gap-2.5 shadow-xl transition-all cursor-pointer">
                 <i class="ph-bold ph-shield-check text-lg"></i> PAY & PRINT NOW
             </button>
-            <p class="text-[10px] text-center text-neutral-500">Secured by Razorpay • Instant Auto-Release to Printer</p>
+            <p class="text-[10px] text-center text-neutral-500">Secured by Razorpay • Sent to the printer queue after payment</p>
         </div>
 
     </main>
@@ -178,9 +173,12 @@
         </div>
     </footer>
 
-    <!-- LOGIC SCRIPT -->
-    <script>
-        // Initialize Firebase with complete project credentials including databaseURL
+    <!-- LOGIC & FIREBASE SCRIPT -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref as dbRef, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+
         const firebaseConfig = {
             apiKey: "AIzaSyBPciyxkLmvoCBBPZuAm-7qyZlh7k4Kyf4",
             authDomain: "silverhalideqrprint.firebaseapp.com",
@@ -192,9 +190,9 @@
             measurementId: "G-M71C96HMQW"
         };
 
-        firebase.initializeApp(firebaseConfig);
-        const storage = firebase.storage();
-        const db = firebase.database();
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const storage = getStorage(app);
 
         const RATES = {
             'bw-single': 2,
@@ -209,12 +207,20 @@
         let activeModalPdfDoc = null;
         let currentThumbListCache = [];
 
+        function escapeHtml(str) {
+            return String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        function safeFileName(name) {
+            return name.replace(/[^\w.\-]/g, '_');
+        }
+
         function formatBytes(bytes) {
             if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
             return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
         }
 
-        async function handleFilesAdded(event) {
+        window.handleFilesAdded = async function(event) {
             const files = Array.from(event.target.files);
             if (!files.length) return;
 
@@ -263,7 +269,8 @@
 
         function parsePageRangeInput(inputStr, maxPages) {
             const set = new Set();
-            if (!inputStr || !inputStr.trim()) return set;
+            if (!inputStr || !inputStr.trim()) return [];
+            if (/^\s*all\b/i.test(inputStr)) return Array.from({ length: maxPages }, (_, i) => i + 1);
             const parts = inputStr.split(',');
             parts.forEach(part => {
                 part = part.trim();
@@ -288,7 +295,7 @@
             return pages.join(', ');
         }
 
-        function updateItemOption(id, field, value) {
+        window.updateItemOption = function(id, field, value) {
             const item = cartItems.find(i => i.id === id);
             if (!item) return;
             if (field === 'printMode') item.printMode = value;
@@ -299,12 +306,12 @@
             renderCart();
         }
 
-        function removeItem(id) {
+        window.removeItem = function(id) {
             cartItems = cartItems.filter(i => i.id !== id);
             renderCart();
         }
 
-        async function openPageModal(index) {
+        window.openPageModal = async function(index) {
             const item = cartItems[index];
             if (!item || !item.pdfDoc) return;
             activeModalItemIndex = index;
@@ -368,7 +375,7 @@
             document.getElementById('modal-selected-count').innerText = `${activeModalSelectedPages.length} of ${thumbList.length} Pages Selected`;
         }
 
-        function modalSelectAll(select) {
+        window.modalSelectAll = function(select) {
             if (!activeModalPdfDoc) return;
             const max = activeModalPdfDoc.numPages;
             if (select) {
@@ -379,12 +386,12 @@
             renderModalThumbnails(currentThumbListCache);
         }
 
-        function closePageModal() {
+        window.closePageModal = function() {
             document.getElementById('page-modal').classList.add('hidden');
             document.body.style.overflow = '';
         }
 
-        function saveModalSelection() {
+        window.saveModalSelection = function() {
             if (activeModalItemIndex !== null && cartItems[activeModalItemIndex]) {
                 cartItems[activeModalItemIndex].selectedPages = [...activeModalSelectedPages];
                 renderCart();
@@ -403,17 +410,11 @@
                 subtotal += (pageCount * item.copies * rate);
             });
 
-            // Tiered Discount Logic
             let discountPercent = 0;
-            if (subtotal > 1000) {
-                discountPercent = 20;
-            } else if (subtotal > 500) {
-                discountPercent = 15;
-            } else if (subtotal > 250) {
-                discountPercent = 10;
-            } else if (subtotal > 100) {
-                discountPercent = 5;
-            }
+            if (subtotal > 1000) discountPercent = 20;
+            else if (subtotal > 500) discountPercent = 15;
+            else if (subtotal > 250) discountPercent = 10;
+            else if (subtotal > 100) discountPercent = 5;
 
             const discountAmount = Math.round((subtotal * discountPercent) / 100);
             const totalPrice = Math.max(0, subtotal - discountAmount);
@@ -474,7 +475,7 @@
                         </div>
 
                         <div class="min-w-0 flex-1">
-                            <h3 class="text-xs font-medium text-white truncate">${item.name}</h3>
+                            <h3 class="text-xs font-medium text-white truncate">${escapeHtml(item.name)}</h3>
                             <p class="text-[10px] text-neutral-400 mt-0.5 font-light">${item.pageCount} Total Pages • ${formatBytes(item.sizeBytes)}</p>
                             <button onclick="openPageModal(${index})" class="mt-2 px-3 py-1.5 rounded-lg bg-neutral-800 border border-bordergray text-neutral-300 font-medium text-[11px] flex items-center gap-1.5 cursor-pointer hover:bg-neutral-700 transition-colors">
                                 <i class="ph-bold ph-eye"></i> View & Select Pages (${item.selectedPages.length} active)
@@ -525,49 +526,89 @@
             document.getElementById('summary-total-price').innerText = '₹' + totalPrice;
         }
 
-        function resetCartSession() {
+        window.resetCartSession = function() {
             cartItems = [];
             renderCart();
         }
 
-        // Razorpay Checkout with Firebase Storage & Realtime Database Integration
-        async function initiateRazorpayPayment() {
+        // ---------- CHECKOUT FLOW ----------
+        // 1) Upload PDFs to Firebase Storage  2) Open Razorpay  3) Save order to Realtime Database
+        // Uploading first means a customer is never charged when the upload fails.
+        let isProcessing = false;
+
+        function setPayButtonState(busy, label) {
+            const btn = document.getElementById('pay-btn');
+            if (!btn) return;
+            btn.disabled = busy;
+            btn.classList.toggle('opacity-60', busy);
+            btn.classList.toggle('cursor-not-allowed', busy);
+            btn.innerHTML = busy
+                ? `<i class="ph-bold ph-spinner-gap animate-spin text-lg"></i> ${label}`
+                : `<i class="ph-bold ph-shield-check text-lg"></i> PAY & PRINT NOW`;
+        }
+
+        async function uploadCartToStorage(orderId) {
+            const uploaded = [];
+            for (const item of cartItems) {
+                const fileRef = storageRef(storage, `print_jobs/${orderId}/${item.id}_${safeFileName(item.name)}`);
+                const snapshot = await uploadBytes(fileRef, item.file, { contentType: 'application/pdf' });
+                const downloadUrl = await getDownloadURL(snapshot.ref);
+                uploaded.push({
+                    fileName: item.name,
+                    filePath: snapshot.ref.fullPath,
+                    fileUrl: downloadUrl,
+                    printMode: item.printMode,
+                    copies: item.copies,
+                    totalPages: item.pageCount,
+                    selectedPages: item.selectedPages
+                });
+            }
+            return uploaded;
+        }
+
+        window.initiateRazorpayPayment = async function() {
+            if (isProcessing) return;
+
             const { totalPrice } = calculateCartTotal();
-            if (totalPrice <= 0 || cartItems.length === 0) {
+            if (cartItems.length === 0 || totalPrice <= 0) {
                 alert("Please add at least one document to print.");
                 return;
             }
+            if (cartItems.some(i => i.selectedPages.length === 0)) {
+                alert("One or more documents have no pages selected. Please select at least one page for each document.");
+                return;
+            }
 
+            isProcessing = true;
+            const orderId = 'SHW-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+            let uploadedItems = [];
+
+            // Step 1: upload files BEFORE taking payment
+            try {
+                setPayButtonState(true, 'Uploading documents...');
+                uploadedItems = await uploadCartToStorage(orderId);
+            } catch (err) {
+                console.error("Upload Error:", err);
+                alert("Could not upload your documents, so you have NOT been charged.\n\nReason: " + (err.code || err.message) + "\n\nPlease check your internet and try again.");
+                isProcessing = false;
+                setPayButtonState(false);
+                return;
+            }
+
+            // Step 2: take payment
+            setPayButtonState(true, 'Waiting for payment...');
             const options = {
                 "key": "rzp_live_U0OBWfXP6bfzBc",
                 "amount": totalPrice * 100, // in paise
                 "currency": "INR",
                 "name": "Silver Halide Works",
-                "description": "Document Print Job (Tier Discount Applied)",
+                "description": "Document Print Job " + orderId,
+                "notes": { orderId: orderId },
                 "handler": async function (response) {
+                    // Step 3: save the order record
                     try {
-                        alert("Payment Successful! Payment ID: " + response.razorpay_payment_id + "\nUploading documents to cloud queue...");
-                        
-                        const orderId = 'SHW-' + Math.random().toString(36).substring(2, 8).toUpperCase();
-                        const uploadedItems = [];
-
-                        // 1. Upload each PDF in cart to Firebase Storage
-                        for (const item of cartItems) {
-                            const storageRef = storage.ref(`print_jobs/${orderId}/${item.name}`);
-                            const snapshot = await storageRef.put(item.file);
-                            const downloadUrl = await snapshot.ref.getDownloadURL();
-
-                            uploadedItems.push({
-                                fileName: item.name,
-                                fileUrl: downloadUrl,
-                                printMode: item.printMode,
-                                copies: item.copies,
-                                selectedPages: item.selectedPages
-                            });
-                        }
-
-                        // 2. Push order record to Firebase Realtime Database with status PENDING
-                        await db.ref(`orders/${orderId}`).set({
+                        setPayButtonState(true, 'Sending to printer...');
+                        await set(dbRef(db, `orders/${orderId}`), {
                             orderId: orderId,
                             timestamp: Date.now(),
                             paymentId: response.razorpay_payment_id,
@@ -575,24 +616,41 @@
                             status: 'PENDING',
                             items: uploadedItems
                         });
-
                         alert(`Order ${orderId} submitted successfully! Your document is queued for printing.`);
                         resetCartSession();
-
                     } catch (err) {
-                        console.error("Cloud Queue Sync Error:", err);
-                        alert("Payment received, but cloud queue upload failed. Please show this screen to shop staff.");
+                        console.error("Order Save Error:", err);
+                        alert("Payment received, but the print queue could not be updated.\n\nPlease show this screen to shop staff.\nOrder ID: " + orderId + "\nPayment ID: " + response.razorpay_payment_id + "\nReason: " + (err.code || err.message));
+                    } finally {
+                        isProcessing = false;
+                        setPayButtonState(false);
                     }
                 },
-                "prefill": {
-                    "name": "Kiosk Walk-in Customer",
-                    "contact": "9876543210"
+                "modal": {
+                    "ondismiss": function () {
+                        // Customer closed the payment window without paying
+                        isProcessing = false;
+                        setPayButtonState(false);
+                    }
                 },
+                "prefill": { "name": "Kiosk Walk-in Customer" },
                 "theme": { "color": "#0a0a0a" }
             };
-            
-            const rzp = new Razorpay(options);
-            rzp.open();
+
+            try {
+                const rzp = new Razorpay(options);
+                rzp.on('payment.failed', function (resp) {
+                    alert("Payment failed: " + (resp.error && resp.error.description ? resp.error.description : "Please try again."));
+                    isProcessing = false;
+                    setPayButtonState(false);
+                });
+                rzp.open();
+            } catch (err) {
+                console.error("Razorpay Error:", err);
+                alert("Could not open the payment window. Please check your internet and try again.");
+                isProcessing = false;
+                setPayButtonState(false);
+            }
         }
     </script>
 </body>
