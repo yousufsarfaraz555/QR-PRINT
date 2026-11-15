@@ -15,6 +15,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <!-- Razorpay Checkout Script -->
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    
+    <!-- Firebase SDKs (Compat v9) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
     <script>
         tailwind.config = {
@@ -175,6 +180,22 @@
 
     <!-- LOGIC SCRIPT -->
     <script>
+        // Initialize Firebase with complete project credentials including databaseURL
+        const firebaseConfig = {
+            apiKey: "AIzaSyBPciyxkLmvoCBBPZuAm-7qyZlh7k4Kyf4",
+            authDomain: "silverhalideqrprint.firebaseapp.com",
+            databaseURL: "https://silverhalideqrprint-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "silverhalideqrprint",
+            storageBucket: "silverhalideqrprint.firebasestorage.app",
+            messagingSenderId: "75281158471",
+            appId: "1:75281158471:web:d2cca7be021d2e160e3c62",
+            measurementId: "G-M71C96HMQW"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const storage = firebase.storage();
+        const db = firebase.database();
+
         const RATES = {
             'bw-single': 2,
             'color-single': 10,
@@ -509,19 +530,59 @@
             renderCart();
         }
 
-        function initiateRazorpayPayment() {
+        // Razorpay Checkout with Firebase Storage & Realtime Database Integration
+        async function initiateRazorpayPayment() {
             const { totalPrice } = calculateCartTotal();
-            if (totalPrice <= 0) return;
+            if (totalPrice <= 0 || cartItems.length === 0) {
+                alert("Please add at least one document to print.");
+                return;
+            }
 
             const options = {
                 "key": "rzp_live_U0OBWfXP6bfzBc",
-                "amount": totalPrice * 100,
+                "amount": totalPrice * 100, // in paise
                 "currency": "INR",
                 "name": "Silver Halide Works",
                 "description": "Document Print Job (Tier Discount Applied)",
-                "handler": function (response){
-                    alert("Payment Successful! Payment ID: " + response.razorpay_payment_id + "\nSending document to printer queue...");
-                    resetCartSession();
+                "handler": async function (response) {
+                    try {
+                        alert("Payment Successful! Payment ID: " + response.razorpay_payment_id + "\nUploading documents to cloud queue...");
+                        
+                        const orderId = 'SHW-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+                        const uploadedItems = [];
+
+                        // 1. Upload each PDF in cart to Firebase Storage
+                        for (const item of cartItems) {
+                            const storageRef = storage.ref(`print_jobs/${orderId}/${item.name}`);
+                            const snapshot = await storageRef.put(item.file);
+                            const downloadUrl = await snapshot.ref.getDownloadURL();
+
+                            uploadedItems.push({
+                                fileName: item.name,
+                                fileUrl: downloadUrl,
+                                printMode: item.printMode,
+                                copies: item.copies,
+                                selectedPages: item.selectedPages
+                            });
+                        }
+
+                        // 2. Push order record to Firebase Realtime Database with status PENDING
+                        await db.ref(`orders/${orderId}`).set({
+                            orderId: orderId,
+                            timestamp: Date.now(),
+                            paymentId: response.razorpay_payment_id,
+                            totalAmount: totalPrice,
+                            status: 'PENDING',
+                            items: uploadedItems
+                        });
+
+                        alert(`Order ${orderId} submitted successfully! Your document is queued for printing.`);
+                        resetCartSession();
+
+                    } catch (err) {
+                        console.error("Cloud Queue Sync Error:", err);
+                        alert("Payment received, but cloud queue upload failed. Please show this screen to shop staff.");
+                    }
                 },
                 "prefill": {
                     "name": "Kiosk Walk-in Customer",
