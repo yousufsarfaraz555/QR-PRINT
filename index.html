@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -18,15 +18,11 @@
 
     <script>
         tailwind.config = {
-            darkMode: 'class',
             theme: {
                 extend: {
                     fontFamily: { sans: ['Inter', 'sans-serif'] },
                     colors: {
-                        darkbg: '#0a0a0a',
-                        cardbg: '#141414',
-                        bordergray: '#262626',
-                        mutedgray: '#888888',
+                        kiosk: { 50: '#f0f7ff', 500: '#0284c7', 600: '#0265d2', 700: '#034ea2', 900: '#0f172a' }
                     }
                 }
             }
@@ -36,52 +32,49 @@
         }
     </script>
     <style>
-        * { box-sizing: border-box; }
-        body { background-color: #0a0a0a; color: #f5f5f5; font-family: 'Inter', sans-serif; overflow-x: hidden; }
+        * { user-select: none; -webkit-user-select: none; box-sizing: border-box; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-thumb { background: #262626; border-radius: 6px; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 6px; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col justify-between selection:bg-neutral-800 selection:text-white relative">
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen flex flex-col justify-between">
 
     <!-- TOP HEADER WITH SHOP LOGO -->
-    <header class="bg-cardbg border-b border-bordergray px-6 py-4 flex items-center justify-between shadow-lg sticky top-0 z-20">
+    <header class="bg-slate-800 border-b border-slate-700 px-4 py-3 flex items-center justify-between shadow-lg sticky top-0 z-20">
         <div class="flex items-center space-x-3">
-            <div class="bg-white p-2 rounded-xl shadow-md flex items-center justify-center text-black">
-                <i class="ph-bold ph-storefront text-lg"></i>
+            <div class="bg-blue-600 p-2.5 rounded-xl shadow-md flex items-center justify-center text-white">
+                <i class="ph-bold ph-storefront text-xl"></i>
             </div>
             <div>
-                <h1 class="text-xs md:text-sm font-bold tracking-[0.2em] text-white uppercase">Silver Halide Works</h1>
-                <p class="text-[10px] text-neutral-400 font-light tracking-wider uppercase">● Document Kiosk • Jamshedpur</p>
+                <h1 class="text-sm md:text-base font-extrabold tracking-wide text-white">STUDIO SELF-PRINT</h1>
+                <p class="text-[10px] text-emerald-400 font-medium">● Self-Service Kiosk • Jamshedpur</p>
             </div>
         </div>
 
-        <div class="flex items-center gap-3">
-            <button onclick="resetCartSession()" class="px-3 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-neutral-300 font-medium text-xs flex items-center gap-1.5 border border-bordergray transition-all cursor-pointer">
-                <i class="ph-bold ph-arrows-counter-clockwise"></i> Reset
-            </button>
-        </div>
+        <button onclick="resetCartSession()" class="px-3 py-2 rounded-xl bg-slate-700 hover:bg-red-600/85 text-slate-200 font-bold text-xs flex items-center gap-1.5 border border-slate-600 transition-all cursor-pointer">
+            <i class="ph-bold ph-arrows-counter-clockwise"></i> Reset
+        </button>
     </header>
 
     <!-- MAIN WORKSPACE -->
     <main class="flex-1 max-w-xl w-full mx-auto p-4 md:p-6 space-y-5 pb-24">
 
         <!-- STEP 1: UPLOAD & QUEUE -->
-        <div class="bg-cardbg border border-bordergray rounded-2xl p-4 md:p-6 shadow-lg space-y-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 md:p-5 shadow-lg space-y-4">
             <div class="flex items-center justify-between">
-                <h2 class="text-xs uppercase tracking-widest text-neutral-300 font-medium flex items-center gap-2">
-                    <i class="ph-fill ph-files text-neutral-400 text-base"></i> 1. Select & Preview Documents
+                <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i class="ph-fill ph-files text-blue-400 text-lg"></i> 1. Select & Preview Documents
                 </h2>
-                <label class="px-4 py-2.5 rounded-xl bg-white hover:bg-neutral-200 active:bg-neutral-300 text-black font-medium text-xs flex items-center gap-1.5 shadow-md cursor-pointer transition-all">
+                <label class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-blue-600/30 cursor-pointer transition-all">
                     <i class="ph-bold ph-plus-circle text-base"></i> Add PDF
                     <input type="file" id="pdf-file-input" accept="application/pdf" multiple class="hidden" onchange="handleFilesAdded(event)">
                 </label>
             </div>
 
             <!-- Empty State -->
-            <div id="cart-empty" class="py-10 border-2 border-dashed border-bordergray rounded-xl flex flex-col items-center justify-center text-neutral-500 gap-2 text-center">
-                <i class="ph-duotone ph-file-pdf text-4xl text-neutral-600"></i>
-                <p class="text-xs font-light">No PDF documents added yet. Tap "Add PDF" to upload files from your device.</p>
+            <div id="cart-empty" class="py-10 border-2 border-dashed border-slate-700 rounded-xl flex flex-col items-center justify-center text-slate-500 gap-2 text-center">
+                <i class="ph-duotone ph-file-pdf text-5xl text-slate-600"></i>
+                <p class="text-xs font-medium">No PDF documents added yet. Tap "Add PDF" to upload files from your phone.</p>
             </div>
 
             <!-- Cart Items List Container -->
@@ -89,88 +82,67 @@
         </div>
 
         <!-- STEP 2: CHECKOUT SUMMARY -->
-        <div id="checkout-card" class="bg-cardbg border border-bordergray rounded-2xl p-5 md:p-6 shadow-lg space-y-4 hidden">
-            <h2 class="text-xs uppercase tracking-widest text-neutral-300 font-medium flex items-center gap-2">
-                <i class="ph-fill ph-receipt text-neutral-400 text-base"></i> 2. Order Checkout
+        <div id="checkout-card" class="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg space-y-4 hidden">
+            <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                <i class="ph-fill ph-receipt text-emerald-400 text-lg"></i> 2. Order Checkout
             </h2>
 
-            <div class="bg-neutral-900 rounded-xl p-4 border border-bordergray space-y-2.5 text-xs">
-                <div class="flex justify-between text-neutral-400 font-light">
+            <div class="bg-slate-900 rounded-xl p-4 border border-slate-700 space-y-2.5 text-xs">
+                <div class="flex justify-between text-slate-400">
                     <span>Total Documents:</span>
-                    <span id="summary-doc-count" class="font-medium text-white">0</span>
+                    <span id="summary-doc-count" class="font-bold text-white">0</span>
                 </div>
-                <div class="flex justify-between text-neutral-400 font-light">
+                <div class="flex justify-between text-slate-400">
                     <span>Total Billable Pages:</span>
-                    <span id="summary-page-count" class="font-medium text-white">0 Pages</span>
+                    <span id="summary-page-count" class="font-bold text-white">0 Pages</span>
                 </div>
-                <div class="flex justify-between text-neutral-400 font-light">
-                    <span>Subtotal Amount:</span>
-                    <span id="summary-subtotal-price" class="font-medium text-white">₹0</span>
-                </div>
-                <div id="discount-row" class="flex justify-between text-emerald-400 font-light hidden">
-                    <span id="discount-label">Tier Discount:</span>
-                    <span id="summary-discount-amount" class="font-medium">-₹0</span>
-                </div>
-                <hr class="border-bordergray">
+                <hr class="border-slate-800">
                 <div class="flex justify-between items-center text-sm">
-                    <span class="font-medium text-neutral-200">Total Payable Amount:</span>
-                    <span id="summary-total-price" class="text-xl font-medium text-white">₹0</span>
+                    <span class="font-bold text-slate-200">Total Payable Amount:</span>
+                    <span id="summary-total-price" class="text-xl font-black text-emerald-400">₹0</span>
                 </div>
             </div>
 
-            <button onclick="initiateRazorpayPayment()" class="w-full py-3.5 rounded-xl bg-white hover:bg-neutral-200 active:bg-neutral-300 text-black font-medium text-sm flex items-center justify-center gap-2.5 shadow-xl transition-all cursor-pointer">
-                <i class="ph-bold ph-shield-check text-lg"></i> PAY & PRINT NOW
+            <button onclick="initiateRazorpayPayment()" class="w-full py-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-black text-base flex items-center justify-center gap-2.5 shadow-xl shadow-emerald-600/30 transition-all cursor-pointer">
+                <i class="ph-bold ph-shield-check text-2xl"></i> PAY & PRINT NOW
             </button>
-            <p class="text-[10px] text-center text-neutral-500">Secured by Razorpay • Instant Auto-Release to Printer</p>
+            <p class="text-[10px] text-center text-slate-400">Secured by Razorpay Live • Instant Auto-Release to Printer</p>
         </div>
 
     </main>
 
     <!-- INTERACTIVE PAGE VIEWER MODAL -->
-    <div id="page-modal" class="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex flex-col hidden overflow-y-auto">
-        <div class="bg-cardbg border-b border-bordergray px-6 py-4 flex items-center justify-between shrink-0 shadow-lg sticky top-0 z-10">
+    <div id="page-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex flex-col hidden">
+        <div class="bg-slate-800 border-b border-slate-700 px-4 py-3.5 flex items-center justify-between shrink-0 shadow-lg">
             <div>
-                <h3 id="modal-doc-title" class="text-xs uppercase tracking-wider font-medium text-white truncate max-w-xs">Select Pages to Print</h3>
-                <p class="text-[10px] text-neutral-400">Tap pages to include/exclude, or use quick select options below.</p>
+                <h3 id="modal-doc-title" class="text-sm font-bold text-white truncate max-w-xs">Select Pages to Print</h3>
+                <p class="text-[10px] text-slate-400">Tap pages to include/exclude, or use quick select options below.</p>
             </div>
-            <button onclick="closePageModal()" class="p-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-white cursor-pointer border border-bordergray">
-                <i class="ph-bold ph-x text-base"></i>
+            <button onclick="closePageModal()" class="p-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-white cursor-pointer">
+                <i class="ph-bold ph-x text-lg"></i>
             </button>
         </div>
 
-        <div class="bg-neutral-900 border-b border-bordergray px-6 py-3 flex items-center justify-between shrink-0 text-xs sticky top-[73px] z-10">
+        <div class="bg-slate-900 border-b border-slate-800 px-4 py-2.5 flex items-center justify-between shrink-0 text-xs">
             <div class="flex gap-2">
-                <button onclick="modalSelectAll(true)" class="px-3 py-1.5 rounded-lg bg-cardbg hover:bg-neutral-800 text-white font-medium border border-bordergray">Select All</button>
-                <button onclick="modalSelectAll(false)" class="px-3 py-1.5 rounded-lg bg-cardbg hover:bg-neutral-800 text-neutral-400 font-medium border border-bordergray">Deselect All</button>
+                <button onclick="modalSelectAll(true)" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold">Select All</button>
+                <button onclick="modalSelectAll(false)" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 font-bold">Deselect All</button>
             </div>
-            <span id="modal-selected-count" class="font-medium text-neutral-300">0 Pages Selected</span>
+            <span id="modal-selected-count" class="font-extrabold text-emerald-400">0 Pages Selected</span>
         </div>
 
-        <div id="modal-thumbnail-grid" class="flex-1 p-4 md:p-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 max-w-4xl mx-auto w-full"></div>
+        <div id="modal-thumbnail-grid" class="flex-1 overflow-y-auto p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 max-w-4xl mx-auto w-full"></div>
 
-        <div class="bg-cardbg border-t border-bordergray p-4 shrink-0 flex justify-end sticky bottom-0 z-10">
-            <button onclick="saveModalSelection()" class="px-6 py-3 rounded-xl bg-white hover:bg-neutral-200 text-black font-medium text-xs uppercase tracking-wider cursor-pointer">
+        <div class="bg-slate-800 border-t border-slate-700 p-4 shrink-0 flex justify-end">
+            <button onclick="saveModalSelection()" class="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-lg cursor-pointer">
                 Apply Page Selection
             </button>
         </div>
     </div>
 
-    <!-- FOOTER WITH NAVIGATION LINKS -->
-    <footer class="bg-cardbg border-t border-bordergray px-6 py-6 text-center text-xs text-neutral-400 shrink-0 space-y-3">
-        <div class="flex flex-wrap justify-center items-center gap-4 text-xs font-medium tracking-wider uppercase">
-            <a href="https://www.silverhalideworks.in/home" class="hover:text-white transition-colors">Home</a>
-            <span class="text-neutral-700">&bull;</span>
-            <a href="https://www.silverhalideworks.in/services/" class="hover:text-white transition-colors">Services</a>
-            <span class="text-neutral-700">&bull;</span>
-            <a href="https://www.silverhalideworks.in/contact-us" class="hover:text-white transition-colors">Contact Us</a>
-            <span class="text-neutral-700">&bull;</span>
-            <a href="https://www.silverhalideworks.in/privacy-policy/" class="hover:text-white transition-colors">Privacy Policy</a>
-            <span class="text-neutral-700">&bull;</span>
-            <a href="https://www.silverhalideworks.in/terms-of-service" class="hover:text-white transition-colors">Terms of Service</a>
-        </div>
-        <div class="text-[11px] text-neutral-500 font-light">
-            &copy; 2026 Silver Halide Works. All rights reserved. Jamshedpur, IN.
-        </div>
+    <!-- FOOTER -->
+    <footer class="bg-slate-800 border-t border-slate-700 px-6 py-3 text-center text-[11px] text-slate-400 shrink-0">
+        Jamshedpur Studio Self-Service Hub • Direct Cloud-to-Printer Link
     </footer>
 
     <!-- LOGIC SCRIPT -->
@@ -213,8 +185,7 @@
 
                 try {
                     const buf = await file.arrayBuffer();
-                    const loadingTask = pdfjsLib.getDocument({ data: buf });
-                    const pdfDoc = await loadingTask.promise;
+                    const pdfDoc = await pdfjsLib.getDocument({ data: buf }).promise;
                     item.pdfDoc = pdfDoc;
                     item.pageCount = pdfDoc.numPages;
                     item.selectedPages = Array.from({ length: pdfDoc.numPages }, (_, i) => i + 1);
@@ -292,10 +263,9 @@
 
             document.getElementById('modal-doc-title').innerText = `Select Pages: ${item.name}`;
             document.getElementById('page-modal').classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
 
             const grid = document.getElementById('modal-thumbnail-grid');
-            grid.innerHTML = '<div class="col-span-full text-center text-neutral-500 py-10">Loading page thumbnails...</div>';
+            grid.innerHTML = '<div class="col-span-full text-center text-slate-400 py-10">Loading page thumbnails...</div>';
 
             currentThumbListCache = [];
             for (let i = 1; i <= item.pageCount; i++) {
@@ -321,7 +291,7 @@
             thumbList.forEach(t => {
                 const isSelected = activeModalSelectedPages.includes(t.pageNum);
                 const card = document.createElement('div');
-                card.className = `bg-neutral-900 border rounded-xl p-2.5 flex flex-col items-center gap-2 cursor-pointer transition-all ${isSelected ? 'border-white bg-white/5 shadow-lg' : 'border-bordergray opacity-40'}`;
+                card.className = `bg-slate-800 border-2 rounded-xl p-2.5 flex flex-col items-center gap-2 cursor-pointer transition-all ${isSelected ? 'border-blue-500 bg-blue-600/10 shadow-lg' : 'border-slate-700 opacity-50'}`;
                 card.onclick = () => {
                     if (activeModalSelectedPages.includes(t.pageNum)) {
                         activeModalSelectedPages = activeModalSelectedPages.filter(p => p !== t.pageNum);
@@ -335,11 +305,11 @@
                 card.innerHTML = `
                     <div class="aspect-[3/4] bg-white rounded-lg overflow-hidden flex items-center justify-center relative w-full">
                         <img src="${t.dataUrl}" class="max-h-full object-contain">
-                        <div class="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${isSelected ? 'bg-white text-black' : 'bg-neutral-800 text-neutral-500'}">
+                        <div class="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${isSelected ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-400'}">
                             ${isSelected ? '✓' : ''}
                         </div>
                     </div>
-                    <span class="text-xs font-light text-neutral-300">Page ${t.pageNum}</span>
+                    <span class="text-xs font-bold text-white">Page ${t.pageNum}</span>
                 `;
                 grid.appendChild(card);
             });
@@ -360,7 +330,6 @@
 
         function closePageModal() {
             document.getElementById('page-modal').classList.add('hidden');
-            document.body.style.overflow = '';
         }
 
         function saveModalSelection() {
@@ -373,31 +342,16 @@
 
         function calculateCartTotal() {
             let totalPages = 0;
-            let subtotal = 0;
+            let totalPrice = 0;
 
             cartItems.forEach(item => {
                 const rate = RATES[item.printMode] || 2;
                 const pageCount = item.selectedPages.length || 0;
                 totalPages += (pageCount * item.copies);
-                subtotal += (pageCount * item.copies * rate);
+                totalPrice += (pageCount * item.copies * rate);
             });
 
-            // Tiered Discount Logic
-            let discountPercent = 0;
-            if (subtotal > 1000) {
-                discountPercent = 20;
-            } else if (subtotal > 500) {
-                discountPercent = 15;
-            } else if (subtotal > 250) {
-                discountPercent = 10;
-            } else if (subtotal > 100) {
-                discountPercent = 5;
-            }
-
-            const discountAmount = Math.round((subtotal * discountPercent) / 100);
-            const totalPrice = Math.max(0, subtotal - discountAmount);
-
-            return { totalPages, subtotal, discountPercent, discountAmount, totalPrice };
+            return { totalPages, totalPrice };
         }
 
         function renderCart() {
@@ -419,7 +373,7 @@
 
             cartItems.forEach((item, index) => {
                 const card = document.createElement('div');
-                card.className = "bg-neutral-900 border border-bordergray rounded-xl p-4 space-y-3.5 shadow-inner";
+                card.className = "bg-slate-900 border border-slate-700 rounded-xl p-4 space-y-3.5 shadow-inner";
                 
                 const options = [
                     { id: 'bw-single', title: 'Single Side (B&W)', price: '₹2/p', icon: 'ph-file-text' },
@@ -431,14 +385,14 @@
                 let optionsHtml = '<div class="grid grid-cols-2 gap-2 pt-1">';
                 options.forEach(opt => {
                     const isSelected = item.printMode === opt.id;
-                    const activeClass = isSelected ? 'border-white bg-neutral-800 text-white shadow' : 'border-bordergray bg-neutral-950 text-neutral-400 hover:border-neutral-700';
+                    const activeClass = isSelected ? 'border-blue-500 bg-blue-600/20 text-white shadow' : 'border-slate-700 bg-slate-800 text-slate-400 hover:border-slate-600';
                     optionsHtml += `
-                        <button type="button" onclick="updateItemOption('${item.id}', 'printMode', '${opt.id}')" class="p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${activeClass}">
+                        <button type="button" onclick="updateItemOption('${item.id}', 'printMode', '${opt.id}')" class="p-2.5 rounded-xl border-2 text-left transition-all cursor-pointer flex flex-col justify-between ${activeClass}">
                             <div class="flex items-center justify-between w-full">
-                                <i class="ph-bold ${opt.icon} text-base ${isSelected ? 'text-white' : 'text-neutral-500'}"></i>
-                                <span class="text-[10px] font-medium px-1.5 py-0.5 rounded ${isSelected ? 'bg-white text-black' : 'bg-neutral-800 text-neutral-400'}">${opt.price}</span>
+                                <i class="ph-bold ${opt.icon} text-base ${isSelected ? 'text-blue-400' : 'text-slate-500'}"></i>
+                                <span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded ${isSelected ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300'}">${opt.price}</span>
                             </div>
-                            <span class="text-[11px] font-medium mt-2 leading-tight">${opt.title}</span>
+                            <span class="text-[11px] font-bold mt-2 leading-tight">${opt.title}</span>
                         </button>
                     `;
                 });
@@ -448,14 +402,14 @@
 
                 card.innerHTML = `
                     <div class="flex items-start justify-between gap-3">
-                        <div class="w-16 h-20 bg-white rounded-lg overflow-hidden shrink-0 border border-bordergray flex items-center justify-center cursor-pointer" onclick="openPageModal(${index})">
-                            ${item.thumbUrl ? `<img src="${item.thumbUrl}" class="w-full h-full object-cover" alt="Preview">` : `<i class="ph-bold ph-file-pdf text-2xl text-neutral-400"></i>`}
+                        <div class="w-16 h-20 bg-white rounded-lg overflow-hidden shrink-0 border border-slate-700 flex items-center justify-center cursor-pointer" onclick="openPageModal(${index})">
+                            ${item.thumbUrl ? `<img src="${item.thumbUrl}" class="w-full h-full object-cover" alt="Preview">` : `<i class="ph-bold ph-file-pdf text-2xl text-slate-400"></i>`}
                         </div>
 
                         <div class="min-w-0 flex-1">
-                            <h3 class="text-xs font-medium text-white truncate">${item.name}</h3>
-                            <p class="text-[10px] text-neutral-400 mt-0.5 font-light">${item.pageCount} Total Pages • ${formatBytes(item.sizeBytes)}</p>
-                            <button onclick="openPageModal(${index})" class="mt-2 px-3 py-1.5 rounded-lg bg-neutral-800 border border-bordergray text-neutral-300 font-medium text-[11px] flex items-center gap-1.5 cursor-pointer hover:bg-neutral-700 transition-colors">
+                            <h3 class="text-xs font-bold text-white truncate">${item.name}</h3>
+                            <p class="text-[10px] text-slate-400 mt-0.5">${item.pageCount} Total Pages • ${formatBytes(item.sizeBytes)}</p>
+                            <button onclick="openPageModal(${index})" class="mt-2 px-3 py-1.5 rounded-lg bg-blue-600/20 border border-blue-500/30 text-blue-400 font-bold text-[11px] flex items-center gap-1.5 cursor-pointer">
                                 <i class="ph-bold ph-eye"></i> View & Select Pages (${item.selectedPages.length} active)
                             </button>
                         </div>
@@ -465,42 +419,31 @@
                         </button>
                     </div>
 
-                    <div class="bg-cardbg p-2.5 rounded-xl border border-bordergray flex items-center justify-between gap-3 text-xs">
-                        <span class="text-neutral-300 font-light">Pages to Print:</span>
-                        <input type="text" value="${pageRangeStr}" onchange="updateItemOption('${item.id}', 'rangeInput', this.value)" placeholder="e.g. 1-3, 5, 8" class="bg-neutral-900 border border-bordergray rounded-lg px-3 py-1 text-white text-xs font-medium w-44 text-right focus:outline-none focus:border-neutral-500">
+                    <div class="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700 flex items-center justify-between gap-3 text-xs">
+                        <span class="text-slate-300 font-semibold">Pages to Print:</span>
+                        <input type="text" value="${pageRangeStr}" onchange="updateItemOption('${item.id}', 'rangeInput', this.value)" placeholder="e.g. 1-3, 5, 8" class="bg-slate-900 border border-slate-600 rounded-lg px-3 py-1 text-white text-xs font-bold w-44 text-right">
                     </div>
 
                     <div>
-                        <label class="text-[10px] font-light uppercase tracking-wider text-neutral-400 block mb-1.5">Select Print Mode</label>
+                        <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">Select Print Mode</label>
                         ${optionsHtml}
                     </div>
 
-                    <div class="flex items-center justify-between pt-2 border-t border-bordergray">
-                        <span class="text-xs font-light text-neutral-300">Number of Copies:</span>
+                    <div class="flex items-center justify-between pt-1 border-t border-slate-800">
+                        <span class="text-xs font-semibold text-slate-300">Number of Copies:</span>
                         <div class="flex items-center gap-2">
-                            <button onclick="updateItemOption('${item.id}', 'copies', ${item.copies - 1})" class="w-8 h-8 rounded-lg bg-cardbg hover:bg-neutral-800 text-white font-medium flex items-center justify-center cursor-pointer border border-bordergray"><i class="ph-bold ph-minus"></i></button>
-                            <span class="w-8 text-center text-xs font-medium text-white">${item.copies}</span>
-                            <button onclick="updateItemOption('${item.id}', 'copies', ${item.copies + 1})" class="w-8 h-8 rounded-lg bg-cardbg hover:bg-neutral-800 text-white font-medium flex items-center justify-center cursor-pointer border border-bordergray"><i class="ph-bold ph-plus"></i></button>
+                            <button onclick="updateItemOption('${item.id}', 'copies', ${item.copies - 1})" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold flex items-center justify-center cursor-pointer"><i class="ph-bold ph-minus"></i></button>
+                            <span class="w-8 text-center text-xs font-bold text-white">${item.copies}</span>
+                            <button onclick="updateItemOption('${item.id}', 'copies', ${item.copies + 1})" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold flex items-center justify-center cursor-pointer"><i class="ph-bold ph-plus"></i></button>
                         </div>
                     </div>
                 `;
                 listEl.appendChild(card);
             });
 
-            const { totalPages, subtotal, discountPercent, discountAmount, totalPrice } = calculateCartTotal();
+            const { totalPages, totalPrice } = calculateCartTotal();
             document.getElementById('summary-doc-count').innerText = cartItems.length;
             document.getElementById('summary-page-count').innerText = totalPages + ' Pages';
-            document.getElementById('summary-subtotal-price').innerText = '₹' + subtotal;
-            
-            const discountRow = document.getElementById('discount-row');
-            if (discountPercent > 0) {
-                discountRow.classList.remove('hidden');
-                document.getElementById('discount-label').innerText = `Tier Discount (${discountPercent}% OFF):`;
-                document.getElementById('summary-discount-amount').innerText = '-₹' + discountAmount;
-            } else {
-                discountRow.classList.add('hidden');
-            }
-
             document.getElementById('summary-total-price').innerText = '₹' + totalPrice;
         }
 
@@ -514,11 +457,11 @@
             if (totalPrice <= 0) return;
 
             const options = {
-                "key": "rzp_test_U09xw5cEfQwn8u",
+                "key": "rzp_live_U0OBWfXP6bfzBc",
                 "amount": totalPrice * 100,
                 "currency": "INR",
-                "name": "Silver Halide Works",
-                "description": "Document Print Job (Tier Discount Applied)",
+                "name": "Studio Self-Print Kiosk",
+                "description": "Document Print Job",
                 "handler": function (response){
                     alert("Payment Successful! Payment ID: " + response.razorpay_payment_id + "\nSending document to printer queue...");
                     resetCartSession();
@@ -527,7 +470,7 @@
                     "name": "Kiosk Walk-in Customer",
                     "contact": "9876543210"
                 },
-                "theme": { "color": "#0a0a0a" }
+                "theme": { "color": "#0265d2" }
             };
             
             const rzp = new Razorpay(options);
