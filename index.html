@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Studio Self-Service Print — Jamshedpur</title>
+    <title>SwiftPrint &amp; Photo — Self-Service Print Kiosk</title>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -51,8 +51,8 @@
                 <i class="ph-bold ph-storefront text-lg"></i>
             </div>
             <div>
-                <h1 class="text-xs md:text-sm font-bold tracking-[0.2em] text-white uppercase">Silver Halide Works</h1>
-                <p class="text-[10px] text-neutral-400 font-light tracking-wider uppercase">● Document Kiosk • Jamshedpur</p>
+                <h1 class="text-xs md:text-sm font-bold tracking-[0.2em] text-white uppercase">SwiftPrint &amp; Photo</h1>
+                <p class="text-[10px] text-neutral-400 font-light tracking-wider uppercase">● A Unit of Silver Halide Works • Jamshedpur</p>
             </div>
         </div>
 
@@ -169,7 +169,7 @@
             <a href="https://www.silverhalideworks.in/terms-of-service" class="hover:text-white transition-colors">Terms of Service</a>
         </div>
         <div class="text-[11px] text-neutral-500 font-light">
-            &copy; 2026 Silver Halide Works. All rights reserved. Jamshedpur, IN.
+            &copy; 2026 SwiftPrint &amp; Photo (A Unit of Silver Halide Works). All rights reserved. Jamshedpur, IN.
         </div>
     </footer>
 
@@ -532,8 +532,6 @@
         }
 
         // ---------- CHECKOUT FLOW ----------
-        // 1) Upload PDFs to Firebase Storage  2) Open Razorpay  3) Save order to Realtime Database
-        // Uploading first means a customer is never charged when the upload fails.
         let isProcessing = false;
 
         function setPayButtonState(busy, label) {
@@ -580,10 +578,9 @@
             }
 
             isProcessing = true;
-            const orderId = 'SHW-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+            const orderId = 'SWIFT-' + Math.random().toString(36).substring(2, 8).toUpperCase();
             let uploadedItems = [];
 
-            // Step 1: upload files BEFORE taking payment
             try {
                 setPayButtonState(true, 'Uploading documents...');
                 uploadedItems = await uploadCartToStorage(orderId);
@@ -595,17 +592,15 @@
                 return;
             }
 
-            // Step 2: take payment
             setPayButtonState(true, 'Waiting for payment...');
             const options = {
                 "key": "rzp_live_U0OBWfXP6bfzBc",
                 "amount": totalPrice * 100, // in paise
                 "currency": "INR",
-                "name": "Silver Halide Works",
+                "name": "SwiftPrint & Photo",
                 "description": "Document Print Job " + orderId,
                 "notes": { orderId: orderId },
                 "handler": async function (response) {
-                    // Step 3: save the order record
                     try {
                         setPayButtonState(true, 'Sending to printer...');
                         await set(dbRef(db, `orders/${orderId}`), {
@@ -628,7 +623,6 @@
                 },
                 "modal": {
                     "ondismiss": function () {
-                        // Customer closed the payment window without paying
                         isProcessing = false;
                         setPayButtonState(false);
                     }
