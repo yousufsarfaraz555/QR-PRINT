@@ -176,8 +176,8 @@
     <!-- LOGIC & FIREBASE SCRIPT -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref as dbRef, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-        import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+                import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBPciyxkLmvoCBBPZuAm-7qyZlh7k4Kyf4",
@@ -191,8 +191,10 @@
         };
 
         const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
         const storage = getStorage(app);
+        const functions = getFunctions(app, 'asia-south1');   // Mumbai, same region as the backend
+        const createOrderFn = httpsCallable(functions, 'createOrder');
+        const verifyPaymentFn = httpsCallable(functions, 'verifyPayment');
 
         const RATES = {
             'bw-single': 2,
@@ -532,6 +534,8 @@
         }
 
         // ---------- CHECKOUT FLOW ----------
+        // 1) Upload PDFs to Firebase Storage  2) Open Razorpay  3) Save order to Realtime Database
+        // Uploading first means a customer is never charged when the upload fails.
         let isProcessing = false;
 
         function setPayButtonState(busy, label) {
@@ -580,41 +584,48 @@
             isProcessing = true;
             const orderId = 'SWIFT-' + Math.random().toString(36).substring(2, 8).toUpperCase();
             let uploadedItems = [];
+            let razorpayOrder = null;
 
+            // Step 1: upload files, then ask the server for a Razorpay order (price is calculated on the server)
             try {
                 setPayButtonState(true, 'Uploading documents...');
                 uploadedItems = await uploadCartToStorage(orderId);
+                setPayButtonState(true, 'Preparing payment...');
+                const res = await createOrderFn({ orderId: orderId, items: uploadedItems });
+                razorpayOrder = res.data;
             } catch (err) {
-                console.error("Upload Error:", err);
-                alert("Could not upload your documents, so you have NOT been charged.\n\nReason: " + (err.code || err.message) + "\n\nPlease check your internet and try again.");
+                console.error("Setup Error:", err);
+                alert("Could not start your order, so you have NOT been charged.\n\nReason: " + (err.code || err.message) + "\n\nPlease check your internet and try again.");
                 isProcessing = false;
                 setPayButtonState(false);
                 return;
             }
 
+            // Step 2: take payment with the server-made order id
             setPayButtonState(true, 'Waiting for payment...');
             const options = {
                 "key": "rzp_live_U0OBWfXP6bfzBc",
-                "amount": totalPrice * 100, // in paise
-                "currency": "INR",
+                "order_id": razorpayOrder.razorpayOrderId,
+                "amount": razorpayOrder.amount,
+                "currency": razorpayOrder.currency,
                 "name": "SwiftPrint & Photo",
                 "description": "Document Print Job " + orderId,
                 "notes": { orderId: orderId },
                 "handler": async function (response) {
+                    // Step 3: the server checks the payment signature and saves the order
                     try {
-                        setPayButtonState(true, 'Sending to printer...');
-                        await set(dbRef(db, `orders/${orderId}`), {
+                        setPayButtonState(true, 'Confirming payment...');
+                        await verifyPaymentFn({
                             orderId: orderId,
-                            timestamp: Date.now(),
-                            paymentId: response.razorpay_payment_id,
-                            totalAmount: totalPrice,
-                            status: 'PENDING',
-                            items: uploadedItems
+                            items: uploadedItems,
+                            razorpay_order_id: response.razorpay_order_id,
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            razorpay_signature: response.razorpay_signature
                         });
                         alert(`Order ${orderId} submitted successfully! Your document is queued for printing.`);
                         resetCartSession();
                     } catch (err) {
-                        console.error("Order Save Error:", err);
+                        console.error("Verify Error:", err);
                         alert("Payment received, but the print queue could not be updated.\n\nPlease show this screen to shop staff.\nOrder ID: " + orderId + "\nPayment ID: " + response.razorpay_payment_id + "\nReason: " + (err.code || err.message));
                     } finally {
                         isProcessing = false;
